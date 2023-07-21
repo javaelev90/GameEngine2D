@@ -38,6 +38,11 @@ void GameEngine::init() {
         {
             throw EngineException("Error SDL2 Initialization. Error: " + std::string(IMG_GetError()));
         }
+
+        frameTimeInMs = std::chrono::milliseconds(1000 / _fps);
+        halfFrameTimeInMs = frameTimeInMs / 2;
+        minLogicFrameChangeMs = std::chrono::milliseconds(_fps / 10);
+
         _initialized = true;
     }
 }
@@ -62,33 +67,13 @@ void GameEngine::run(){
         if(!_initialized) {
             init();
         }
-        auto frameTimeInMs = std::chrono::milliseconds(1000 / _fps);
-        auto halfFrameTimeInMs = frameTimeInMs / 2;
-        auto minLogicFrameChangeMs = std::chrono::milliseconds(_fps / 10);
+
         _running = true;
-        while (_running) {
+        while(_running) {
             currentTime = getTimeInMiliseconds();
             elapsedTime = getTimeInMiliseconds() - currentTime;
             // The logic loop will use at least half of the frame time
-            while((elapsedTime + minLogicFrameChangeMs) <= halfFrameTimeInMs){
-                startLogic = getTimeInMiliseconds();
-
-                SDL_Event e;
-                while (SDL_PollEvent(&e)) {
-                    if (e.type == SDL_QUIT) {
-                        _running = false;
-                        return;
-                    }
-                    Mouse::getInstance().updateMouseState(e.motion, e.button, e.wheel);
-                    Keyboard::getInstance().updateKeyboardState(e.key);
-
-                    EventHandler::handleEvent(e);
-                }
-                _scene->update();
-                timeChange = getTimeInMiliseconds() - startLogic;
-                elapsedTime += timeChange + minLogicFrameChangeMs;
-                deltaTime = (timeChange + minLogicFrameChangeMs).count() / 1000.0f;
-            }
+            updateLogic();
             // Let rendering have the other half of the frame time
             renderObjects();
             if(elapsedTime < frameTimeInMs) {
@@ -109,6 +94,31 @@ void GameEngine::cleanUp(){
     delete _renderer;
     IMG_Quit();
     SDL_Quit();
+}
+
+void GameEngine::updateLogic(){
+    while((elapsedTime + minLogicFrameChangeMs) <= halfFrameTimeInMs) {
+        startLogic = getTimeInMiliseconds();
+        handleEvents();
+        _scene->update();
+        timeChange = getTimeInMiliseconds() - startLogic;
+        elapsedTime += timeChange + minLogicFrameChangeMs;
+        deltaTime = (timeChange + minLogicFrameChangeMs).count() / 1000.0f;
+    }
+}
+
+void GameEngine::handleEvents(){
+    SDL_Event e;
+    while(SDL_PollEvent(&e)) {
+        if (e.type == SDL_QUIT) {
+            _running = false;
+            return;
+        }
+        Mouse::getInstance().updateMouseState(e.motion, e.button, e.wheel);
+        Keyboard::getInstance().updateKeyboardState(e.key);
+
+        EventHandler::handleEvent(e);
+    }
 }
 
 void GameEngine::renderObjects(){

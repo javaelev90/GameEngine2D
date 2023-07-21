@@ -32,8 +32,14 @@ namespace GE2D {
             std::chrono::time_point<highResClock, ms> startLogic;
             std::chrono::duration<int64_t, std::milli> elapsedTime;  
             std::chrono::duration<int64_t, std::milli> timeChange;
+
+            std::chrono::milliseconds frameTimeInMs;
+            std::chrono::milliseconds halfFrameTimeInMs;
+            std::chrono::milliseconds minLogicFrameChangeMs;
+
             void init();
-            void updateObjects();
+            void updateLogic();
+            void handleEvents();
             void renderObjects();
             void cleanUp();
 
